@@ -1,7 +1,8 @@
 // image_formats::bmp
 // by Desmond Germans, 2019
 
-use crate::Image;
+use math::*;
+use crate::*;
 
 const TYPE_C1: u16 = 0x0001;
 const TYPE_C2: u16 = 0x0002;
@@ -80,7 +81,7 @@ impl Component {
     }
 }
 
-pub fn decode_pixels(dst: &mut [u32],src: &[u8],width: usize,height: usize,bottom_up: bool,itype: u16,palette: &[u32; 256],redmask: u32,greenmask: u32,bluemask: u32,alphamask: u32) {
+fn decode_pixels<T: Pixel>(dst: &mut [T],src: &[u8],width: usize,height: usize,bottom_up: bool,itype: u16,palette: &[T; 256],redmask: u32,greenmask: u32,bluemask: u32,alphamask: u32) {
     let red = Component::new(redmask);
     let green = Component::new(greenmask);
     let blue = Component::new(bluemask);
@@ -318,12 +319,12 @@ pub fn decode_pixels(dst: &mut [u32],src: &[u8],width: usize,height: usize,botto
                     let mut r = (d >> 10) & 31;
                     let mut g = (d >> 5) & 31;
                     let mut b = d & 31;
-                    let a = if alphamask == 0 { 255 } else if (d & 0x8000) != 0 { 255 } else { 0 };
+                    //let a = if alphamask == 0 { 255 } else if (d & 0x8000) != 0 { 255 } else { 0 };
                     r = (r << 3) | (r >> 2);
                     g = (g << 3) | (g >> 2);
                     b = (b << 3) | (b >> 2);
                     //println!("{},{}: {:04X} - a{} r{} g{} b{}",x,line,d,a,r,g,b);
-                    dst[dp] = ((a as u32) << 24) | ((r as u32) << 16) | ((g as u32) << 8) | (b as u32);
+                    dst[dp] = T::new_rgb(r as u8,g as u8,b as u8);
                     dp += 1;
                 }
                 let rest = (width * 2) & 3;
@@ -343,7 +344,7 @@ pub fn decode_pixels(dst: &mut [u32],src: &[u8],width: usize,height: usize,botto
                     let g = green.get(d,0);
                     let b = blue.get(d,0);
                     let a = if alphamask == 0 { 255 } else { alpha.get(d,255) };
-                    dst[dp] = ((a as u32) << 24) | ((r as u32) << 16) | ((g as u32) << 8) | (b as u32);
+                    dst[dp] = T::new_rgba(r,g,b,a);
                     dp += 1;
                 }
                 let rest = (width * 2) & 3;
@@ -361,7 +362,7 @@ pub fn decode_pixels(dst: &mut [u32],src: &[u8],width: usize,height: usize,botto
                     let g = src[sp + 1];
                     let r = src[sp + 2];
                     sp += 3;
-                    dst[dp] = 0xFF000000 | ((r as u32) << 16) | ((g as u32) << 8) | (b as u32);
+                    dst[dp] = T::new_rgb(r,g,b);
                     dp += 1;
                 }
                 let rest = (width * 3) & 3;
@@ -381,7 +382,7 @@ pub fn decode_pixels(dst: &mut [u32],src: &[u8],width: usize,height: usize,botto
                     let g = (d >> 8) & 255;
                     let b = d & 255;
                     let a = if alphamask == 0 { 255 } else { d >> 24 };
-                    dst[dp] = ((a as u32) << 24) | ((r as u32) << 16) | ((g as u32) << 8) | (b as u32);
+                    dst[dp] = T::new_rgba(r as u8,g as u8,b as u8,a as u8);
                     dp += 1;
                 }
                 line = (line as isize + dline) as usize;
@@ -397,7 +398,7 @@ pub fn decode_pixels(dst: &mut [u32],src: &[u8],width: usize,height: usize,botto
                     let g = green.get(d,0);
                     let b = blue.get(d,0);
                     let a = if alphamask == 0 { 255 } else { alpha.get(d,255) };
-                    dst[dp] = ((a as u32) << 24) | ((r as u32) << 16) | ((g as u32) << 8) | (b as u32);
+                    dst[dp] = T::new_rgba(r,g,b,a);
                     dp += 1;
                 }
                 line = (line as isize + dline) as usize;
@@ -497,7 +498,7 @@ pub fn test(src: &[u8]) -> Option<(usize,usize)> {
     None
 }
 
-pub fn decode(src: &[u8]) -> Result<Image,String> {
+pub fn decode<T: Pixel>(src: &[u8]) -> Result<Image<T>,String> {
     let tag = from_le16(&src[0..2]);
     if (tag != 0x4D42) &&
         (tag != 0x4142) &&
@@ -528,7 +529,7 @@ pub fn decode(src: &[u8]) -> Result<Image,String> {
     let mut bottom_up = true;
     #[allow(unused_assignments)]
     let mut itype = 0u16;
-    let mut palette = [0u32; 256];
+    let mut palette = [T::zero(); 256];
     let mut redmask = 0u32;
     let mut greenmask = 0u32;
     let mut bluemask = 0u32;
@@ -609,7 +610,7 @@ pub fn decode(src: &[u8]) -> Result<Image,String> {
                     let b = src[sp];
                     let g = src[sp + 1];
                     let r = src[sp + 2];
-                    palette[i as usize] = 0xFF000000 | ((r as u32) << 16) | ((g as u32) << 8) | (b as u32);
+                    palette[i as usize] = T::new_rgb(r,g,b);
                 }
             },
             TYPE_B16 | TYPE_B32 => {
@@ -629,8 +630,8 @@ pub fn decode(src: &[u8]) -> Result<Image,String> {
             _ => { },
         }
     }
-    let mut image = Image::new(width,height);
-    decode_pixels(&mut image.data,&src[offset as usize..],width,height,bottom_up,itype,&palette,redmask,greenmask,bluemask,alphamask);
+    let mut image = Image::<T>::new(usizexy { x: width,y: height });
+    decode_pixels::<T>(&mut image.data,&src[offset as usize..],width,height,bottom_up,itype,&palette,redmask,greenmask,bluemask,alphamask);
     Ok(image)
 }
 
@@ -664,9 +665,9 @@ impl WriteTypes for Vec<u8> {
     }
 }
 
-pub fn encode(image: &Image) -> Result<Vec<u8>,String> {
+pub fn encode<T: Pixel>(image: &Image<T>) -> Result<Vec<u8>,String> where u32: From<T> {
     let headersize = 108;
-    let stride = image.width * 4;
+    let stride = image.size.x * 4;
     let palettesize = 0;
     let bpp = 32;
     let compression = 3;
@@ -675,7 +676,7 @@ pub fn encode(image: &Image) -> Result<Vec<u8>,String> {
     let greenmask: u32 = 0x0000FF00;
     let bluemask: u32 = 0x000000FF;
     let alphamask: u32 = 0xFF000000;
-    let imagesize = stride * image.height;
+    let imagesize = stride * image.size.y;
     let offset = 14 + headersize + palettesize;
     let filesize = offset + imagesize;
     let mut dst: Vec<u8> = Vec::new();
@@ -684,8 +685,8 @@ pub fn encode(image: &Image) -> Result<Vec<u8>,String> {
     dst.push32(0);  // 6
     dst.push32(offset as u32);  // 10
     dst.push32(headersize as u32);  // 14
-    dst.push32(image.width as u32);  // 18
-    dst.push32(-(image.height as i32) as u32);  // 22
+    dst.push32(image.size.x as u32);  // 18
+    dst.push32(-(image.size.y as i32) as u32);  // 22
     dst.push16(1);  // 26
     dst.push16(bpp);  // 28
     dst.push32(compression);  // 30
@@ -711,9 +712,9 @@ pub fn encode(image: &Image) -> Result<Vec<u8>,String> {
     dst.push32(0);  // 110
     dst.push32(0);  // 114
     dst.push32(0);  // 118
-    for y in 0..image.height {
-        for x in 0..image.width {
-            dst.push32(image.data[y * image.width + x]);  // 122..
+    for y in 0..image.size.y {
+        for x in 0..image.size.x {
+            dst.push32(u32::from(*image.pixel(usizexy { x: x,y: y, })));  // 122..
         }
     }
     Ok(dst)

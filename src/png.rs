@@ -1,7 +1,8 @@
-// image_formats::png
-// by Desmond Germans, 2019
+// image
+// by Desmond Germans
 
-use crate::Image;
+use math::*;
+use crate::*;
 
 // Inflate algorithm
 const LITLEN_LENGTH: [u16; 29] = [3,4,5,6,7,8,9,10,11,13,15,17,19,23,27,31,35,43,51,59,67,83,99,115,131,163,195,227,258];
@@ -450,32 +451,32 @@ fn clampf(v: f32,min: f32,max: f32) -> f32 {
     }
 }
 
-fn make_lf(l: f32,gamma: f32) -> u32 {
-    let ul = (clampf(l.powf(gamma),0.0,1.0) * 255.0) as u32;
-    return 0xFF000000 | (ul << 16) | (ul << 8) | ul;
+fn make_lf<T: Pixel + From<RGB8>>(l: f32,gamma: f32) -> T {
+    let ul = (clampf(l.powf(gamma),0.0,1.0) * 255.0) as u8;
+    return T::from(RGB8 { r: ul,g: ul,b: ul, });
 }
 
-fn make_rgbaf(r: f32,g: f32,b: f32,a: f32,gamma: f32) -> u32 {
-    let ur = (clampf(r.powf(gamma),0.0,1.0) * 255.0) as u32;
-    let ug = (clampf(g.powf(gamma),0.0,1.0) * 255.0) as u32;
-    let ub = (clampf(b.powf(gamma),0.0,1.0) * 255.0) as u32;
-    let ua = (clampf(a.powf(gamma),0.0,1.0) * 255.0) as u32;
-    return (ua << 24) | (ur << 16) | (ug << 8) | ub;	
+fn make_rgbaf<T: Pixel + From<ARGB8>>(r: f32,g: f32,b: f32,a: f32,gamma: f32) -> T {
+    let ur = (clampf(r.powf(gamma),0.0,1.0) * 255.0) as u8;
+    let ug = (clampf(g.powf(gamma),0.0,1.0) * 255.0) as u8;
+    let ub = (clampf(b.powf(gamma),0.0,1.0) * 255.0) as u8;
+    let ua = (clampf(a.powf(gamma),0.0,1.0) * 255.0) as u8;
+    return T::from(ARGB8 { r: ur,g: ug,b: ub,a: ua, });
 }
 
-fn make_c(c: u32,gamma: f32) -> u32 {
+fn make_c<T: Pixel + From<ARGB8>>(c: u32,gamma: f32) -> T {
     let r = (((c >> 16) & 255) as f32) / 255.0;
     let g = (((c >> 8) & 255) as f32) / 255.0;
     let b = ((c & 255) as f32) / 255.0;
     let a = ((c >> 24) as f32) / 255.0;
-    let ur = (clampf(r.powf(gamma),0.0,1.0) * 255.0) as u32;
-    let ug = (clampf(g.powf(gamma),0.0,1.0) * 255.0) as u32;
-    let ub = (clampf(b.powf(gamma),0.0,1.0) * 255.0) as u32;
-    let ua = (clampf(a.powf(gamma),0.0,1.0) * 255.0) as u32;
-    return (ua << 24) | (ur << 16) | (ug << 8) | ub;	
+    let ur = (clampf(r.powf(gamma),0.0,1.0) * 255.0) as u8;
+    let ug = (clampf(g.powf(gamma),0.0,1.0) * 255.0) as u8;
+    let ub = (clampf(b.powf(gamma),0.0,1.0) * 255.0) as u8;
+    let ua = (clampf(a.powf(gamma),0.0,1.0) * 255.0) as u8;
+    return T::from(ARGB8 { r: ur,g: ug,b: ub,a: ua, });
 }
 
-fn decode_pixels(dst: &mut [u32],src: &[u8],width: usize,height: usize,stride: usize,x0: usize,y0: usize,dx: usize,dy: usize,itype: u16,palette: &[u32; 256],gamma: f32) {
+fn decode_pixels<T: Pixel + From<RGB8> + From<ARGB8>>(dst: &mut [T],src: &[u8],width: usize,height: usize,stride: usize,x0: usize,y0: usize,dx: usize,dy: usize,itype: u16,palette: &[u32; 256],gamma: f32) {
     let mut sp = 0;
     match itype {
         TYPE_L1 => {
@@ -485,7 +486,7 @@ fn decode_pixels(dst: &mut [u32],src: &[u8],width: usize,height: usize,stride: u
                     sp += 1;
                     for i in 0..8 {
                         let l = if(d & (0x80 >> i)) != 0 { 1.0 } else { 0.0 };
-                        dst[(y0 + y * dy) * stride + x0 + (x * 8 + i) * dx] = make_lf(l,gamma);
+                        dst[(y0 + y * dy) * stride + x0 + (x * 8 + i) * dx] = make_lf::<T>(l,gamma);
                     }
                 }
                 if (width & 7) != 0 {
@@ -493,7 +494,7 @@ fn decode_pixels(dst: &mut [u32],src: &[u8],width: usize,height: usize,stride: u
                     sp += 1;
                     for i in 0..8 {
                         let l = if(d & (0x80 >> i)) != 0 { 1.0 } else { 0.0 };
-                        dst[(y0 + y * dy) * stride + x0 + ((width & 0xFFFFFFF8) + i) * dx] = make_lf(l,gamma);
+                        dst[(y0 + y * dy) * stride + x0 + ((width & 0xFFFFFFF8) + i) * dx] = make_lf::<T>(l,gamma);
                     }
                 }
             }
@@ -505,7 +506,7 @@ fn decode_pixels(dst: &mut [u32],src: &[u8],width: usize,height: usize,stride: u
                     sp += 1;
                     for i in 0..8 {
                         let c = if (d & (0x80 >> i)) != 0 { palette[1] } else { palette[0] };
-                        dst[(y0 + y * dy) * stride + x0 + (x * 8 + i) * dx] = make_c(c,gamma);
+                        dst[(y0 + y * dy) * stride + x0 + (x * 8 + i) * dx] = make_c::<T>(c,gamma);
                     }
                 }
                 if (width & 7) != 0 {
@@ -513,7 +514,7 @@ fn decode_pixels(dst: &mut [u32],src: &[u8],width: usize,height: usize,stride: u
                     sp += 1;
                     for i in 0..(width & 7) {
                         let c = if (d & (0x80 >> i)) != 0 { palette[1] } else { palette[0] };
-                        dst[(y0 + y * dy) * stride + x0 + ((width & 0xFFFFFFF8) + i) * dx] = make_c(c,gamma);
+                        dst[(y0 + y * dy) * stride + x0 + ((width & 0xFFFFFFF8) + i) * dx] = make_c::<T>(c,gamma);
                     }
                 }
             }
@@ -524,14 +525,14 @@ fn decode_pixels(dst: &mut [u32],src: &[u8],width: usize,height: usize,stride: u
                     let d = src[sp];
                     sp += 1;
                     for i in 0..4 {
-                        dst[(y0 + y * dy) * stride + x0 + (x * 4 + i) * dx] = make_lf(GRAY2[((d >> ((3 - i) * 2)) & 3) as usize],gamma);
+                        dst[(y0 + y * dy) * stride + x0 + (x * 4 + i) * dx] = make_lf::<T>(GRAY2[((d >> ((3 - i) * 2)) & 3) as usize],gamma);
                     }
                 }
                 if(width & 3) != 0 {
                     let d = src[sp];
                     sp += 1;
                     for i in 0..(width & 3) {
-                        dst[(y0 + y * dy) * stride + x0 + ((width & 0xFFFFFFFC) + i) * dx] = make_lf(GRAY2[((d >> ((3 - i) * 2)) & 3) as usize],gamma);
+                        dst[(y0 + y * dy) * stride + x0 + ((width & 0xFFFFFFFC) + i) * dx] = make_lf::<T>(GRAY2[((d >> ((3 - i) * 2)) & 3) as usize],gamma);
                     }
                 }
             }
@@ -542,14 +543,14 @@ fn decode_pixels(dst: &mut [u32],src: &[u8],width: usize,height: usize,stride: u
                     let d = src[sp];
                     sp += 1;
                     for i in 0..4 {
-                        dst[(y0 + y * dy) * stride + x0 + (x * 4 + i) * dx] = make_c(palette[((d >> ((3 - i) * 2)) & 3) as usize],gamma);
+                        dst[(y0 + y * dy) * stride + x0 + (x * 4 + i) * dx] = make_c::<T>(palette[((d >> ((3 - i) * 2)) & 3) as usize],gamma);
                     }
                 }
                 if(width & 3) != 0 {
                     let d = src[sp];
                     sp += 1;
                     for i in 0..(width & 3) {
-                        dst[(y0 + y * dy) * stride + x0 + ((width & 0xFFFFFFFC) + i) * dx] = make_c(palette[((d >> ((3 - i) * 2)) & 3) as usize],gamma);
+                        dst[(y0 + y * dy) * stride + x0 + ((width & 0xFFFFFFFC) + i) * dx] = make_c::<T>(palette[((d >> ((3 - i) * 2)) & 3) as usize],gamma);
                     }
                 }
             }
@@ -560,11 +561,11 @@ fn decode_pixels(dst: &mut [u32],src: &[u8],width: usize,height: usize,stride: u
                     let d = src[sp];
                     sp += 1;
                     for i in 0..2 {
-                        dst[(y0 + y * dy) * stride + x0 + (x * 2 + i) * dx] = make_lf(GRAY4[((d >> ((1 >> i) * 4)) & 15) as usize],gamma);
+                        dst[(y0 + y * dy) * stride + x0 + (x * 2 + i) * dx] = make_lf::<T>(GRAY4[((d >> ((1 >> i) * 4)) & 15) as usize],gamma);
                     }
                 }
                 if (width & 1) != 0 {
-                    dst[(y0 + y * dy) * stride + x0 + (width & 0xFFFFFFFE) * dx] = make_lf(GRAY4[(src[sp] >> 4) as usize],gamma);
+                    dst[(y0 + y * dy) * stride + x0 + (width & 0xFFFFFFFE) * dx] = make_lf::<T>(GRAY4[(src[sp] >> 4) as usize],gamma);
                     sp += 1;
                 }
             }
@@ -725,7 +726,7 @@ pub fn test(src: &[u8]) -> Option<(usize,usize)> {
     None
 }
 
-pub fn decode(src: &[u8]) -> Result<Image,String> {
+pub fn decode<T: Pixel + From<RGB8> + From<ARGB8>>(src: &[u8]) -> Result<Image<T>,String> {
     if (src[0] != 0x89) ||
         (src[1] != 0x50) ||
         (src[2] != 0x4E) ||
@@ -960,7 +961,7 @@ pub fn decode(src: &[u8]) -> Result<Image,String> {
             Err(msg) => { return Err(msg); },
         };
         let mut sp = 0;
-        let mut result = Image::new(width,height);
+        let mut result = Image::<T>::new(usizexy { x: width,y: height, });
         for i in 0..7 {
             if apresent[i] {
                 let raw_data = unfilter(&filtered_data[sp..sp + adsize[i]],aheight[i],astride[i],bpp);
@@ -984,7 +985,7 @@ pub fn decode(src: &[u8]) -> Result<Image,String> {
         
         //let after_unfilter = Instant::now();
         
-        let mut result = Image::new(width,height);
+        let mut result = Image::<T>::new(usizexy { x: width,y: height, });
         decode_pixels(&mut result.data,&raw_data,width,height,width,0,0,1,1,itype as u16,&palette,gamma);
         
         //let after_decode = Instant::now();
@@ -1007,6 +1008,6 @@ pub fn decode(src: &[u8]) -> Result<Image,String> {
     }
 }
 
-pub fn encode(_image: &Image) -> Result<Vec<u8>,String> {
+pub fn encode<T: Pixel + From<RGB8>>(_image: &Image<T>) -> Result<Vec<u8>,String> {
     Err("not implemented".to_string())
 }

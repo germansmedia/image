@@ -1,7 +1,8 @@
 // image_formats::jpeg
 // by Desmond Germans, 2019
 
-use crate::Image;
+use math::*;
+use crate::*;
 
 const TYPE_Y: u16 = 0x000C;
 const TYPE_YUV420: u16 = 0x3900;
@@ -685,28 +686,21 @@ fn convert_blocks(coeffs: &mut [i32],count: usize,pattern: u16,qtable: &[[i32; 6
 	}
 }
 
-fn clamp<T : std::cmp::PartialOrd>(v: T,min: T,max: T) -> T {
-	if v < min {
-		return min;
-	}
-	else if v > max {
-		return max;
-	}
-	v
+fn draw_rgb<T: Pixel>(image: &mut Image<T>,px: usize,py: usize,r: i32,g: i32,b: i32) {
+	let r = if r < 0 { 0 } else { if r > 255 { 255 } else { r as u8 } };
+	let g = if g < 0 { 0 } else { if g > 255 { 255 } else { g as u8 } };
+	let b = if b < 0 { 0 } else { if b > 255 { 255 } else { b as u8 } };
+	*image.pixel_mut(usizexy { x: px,y: py, }) = T::new_rgb(r,g,b);
 }
 
-fn draw_rgb(image: &mut Image,px: usize,py: usize,r: i32,g: i32,b: i32) {
-	image.data[py * image.width + px] = 0xFF000000 | ((clamp(r,0,255) as u32) << 16) | ((clamp(g,0,255) as u32) << 8) | (clamp(b,0,255) as u32);
-}
-
-fn draw_yuv(image: &mut Image,px: usize,py: usize,y: i32,u: i32,v: i32) {
+fn draw_yuv<T: Pixel>(image: &mut Image<T>,px: usize,py: usize,y: i32,u: i32,v: i32) {
 	let r = ((y << 8) + 359 * v) >> 8;
 	let g = ((y << 8) - 88 * u - 183 * v) >> 8;
 	let b = ((y << 8) + 454 * u) >> 8;
 	draw_rgb(image,px,py,r,g,b);
 }
 
-fn draw_macroblock_y(image: &mut Image,x0: usize,y0: usize,width: usize,height: usize,coeffs: &[i32]) {
+fn draw_macroblock_y<T: Pixel>(image: &mut Image<T>,x0: usize,y0: usize,width: usize,height: usize,coeffs: &[i32]) {
 	for i in 0..height {
 		for k in 0..width {
 			draw_yuv(image,x0 + k,y0 + i,(coeffs[i * 8 + k] + 128) as i32,0,0);
@@ -714,7 +708,7 @@ fn draw_macroblock_y(image: &mut Image,x0: usize,y0: usize,width: usize,height: 
 	}
 }
 
-fn draw_macroblock_yuv420(image: &mut Image,x0: usize,y0: usize,width: usize,height: usize,coeffs: &[i32]) {
+fn draw_macroblock_yuv420<T: Pixel>(image: &mut Image<T>,x0: usize,y0: usize,width: usize,height: usize,coeffs: &[i32]) {
 	for i in 0..height {
 		for k in 0..width {
 			let by = (i >> 3) * 2 + (k >> 3);
@@ -730,7 +724,7 @@ fn draw_macroblock_yuv420(image: &mut Image,x0: usize,y0: usize,width: usize,hei
 	}
 }
 
-fn draw_macroblock_yuv422(image: &mut Image,x0: usize,y0: usize,width: usize,height: usize,coeffs: &[i32]) {
+fn draw_macroblock_yuv422<T: Pixel>(image: &mut Image<T>,x0: usize,y0: usize,width: usize,height: usize,coeffs: &[i32]) {
 	for i in 0..height {
 		for k in 0..width {
 			let by = k >> 3;
@@ -744,7 +738,7 @@ fn draw_macroblock_yuv422(image: &mut Image,x0: usize,y0: usize,width: usize,hei
 	}
 }
 
-fn draw_macroblock_yuv440(image: &mut Image,x0: usize,y0: usize,width: usize,height: usize,coeffs: &[i32]) {
+fn draw_macroblock_yuv440<T: Pixel>(image: &mut Image<T>,x0: usize,y0: usize,width: usize,height: usize,coeffs: &[i32]) {
 	for i in 0..height {
 		for k in 0..width {
 			let by = i >> 3;
@@ -758,7 +752,7 @@ fn draw_macroblock_yuv440(image: &mut Image,x0: usize,y0: usize,width: usize,hei
 	}
 }
 
-fn draw_macroblock_yuv444(image: &mut Image,x0: usize,y0: usize,width: usize,height: usize,coeffs: &[i32]) {
+fn draw_macroblock_yuv444<T: Pixel>(image: &mut Image<T>,x0: usize,y0: usize,width: usize,height: usize,coeffs: &[i32]) {
 	for i in 0..height {
 		for k in 0..width {
 			let y = coeffs[i * 8 + k] + 128;
@@ -769,7 +763,7 @@ fn draw_macroblock_yuv444(image: &mut Image,x0: usize,y0: usize,width: usize,hei
 	}
 }
 
-fn draw_macroblock_rgb444(image: &mut Image,x0: usize,y0: usize,width: usize,height: usize,coeffs: &[i32]) {
+fn draw_macroblock_rgb444<T: Pixel>(image: &mut Image<T>,x0: usize,y0: usize,width: usize,height: usize,coeffs: &[i32]) {
 	for i in 0..height {
 		for k in 0..width {
 			let r = coeffs[i * 8 + k] + 128;
@@ -806,7 +800,7 @@ pub fn test(src: &[u8]) -> Option<(usize,usize)> {
 	None
 }
 
-pub fn decode(src: &[u8]) -> Result<Image,String> {
+pub fn decode<T: Pixel>(src: &[u8]) -> Result<Image<T>,String> {
 	if from_be16(&src[0..2]) != 0xFFD8 {
 		return Err("Invalid JPEG".to_string());
 	}
@@ -933,7 +927,7 @@ pub fn decode(src: &[u8]) -> Result<Image,String> {
 			},
 			0xFFD9 => {  // image end
 				//println!("end");
-				let mut image = Image::new(width,height);
+				let mut image = Image::new(usizexy { x: width,y: height, });
 				match itype {
 					TYPE_Y => { convert_blocks(&mut coeffs,mbtotal,TYPE_Y,&qtable,&qt); },
 					TYPE_YUV420 => { convert_blocks(&mut coeffs,mbtotal * 6,TYPE_YUV420,&qtable,&qt); },
@@ -1106,6 +1100,6 @@ pub fn decode(src: &[u8]) -> Result<Image,String> {
 	Err("Invalid JPEG".to_string())
 }
 
-pub fn encode(_image: &Image) -> Result<Vec<u8>,String> {
+pub fn encode<T: Pixel>(_image: &Image<T>) -> Result<Vec<u8>,String> {
 	Err("not implemented yet".to_string())
 }

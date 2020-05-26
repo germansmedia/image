@@ -1,18 +1,27 @@
-// image_formats::image
-// by Desmond Germans, 2019
+// image
+// by Desmond Germans
 
-pub struct Image {
-    pub width: usize,
-    pub height: usize,
-    pub data: Vec<u32>,
+use math::*;
+use crate::*;
+
+pub struct Image<T> {
+    pub size: usizexy,
+    pub data: Box<[T]>,
 }
 
-impl Image {
-    pub fn new(width: usize,height: usize) -> Image {
+impl<T: Pixel + Clone + Zero> Image<T> {
+    pub fn new(size: usizexy) -> Image<T> {
         Image {
-            width: width,
-            height: height,
-            data: vec![0; width * height],
+            size: size,
+            data: vec![T::zero(); size.x * size.y].into_boxed_slice(),
         }
+    }
+
+    pub fn pixel(&self,p: usizexy) -> &T {
+        &self.data[p.y * self.size.x + p.x]
+    }
+
+    pub fn pixel_mut(&mut self,p: usizexy) -> &mut T {
+        &mut self.data[p.y * self.size.x + p.x]
     }
 }
