@@ -14,19 +14,26 @@ If you use this, mention my name somewhere, and also, do one good deed for your 
 
 From math we have `RGB<T>` and `RGBA<T>` which are prettymuch only valid for `f32` and `f64` (`f32rgb`, `f32rgba`, `f64rgb` and `f64rgba`). These are float formats that also implement mathematical operations, much like vectors.
 
-`image` also defines the following bit-precise pixelformats that can be used to define images, etc.:
+`RGB<T>` and `RGBA<T>` can be used as floating-point pixel formats because the trait `Pixel` is implemented for them. This means, an image can be loaded directly into a floating-point array. Next to `RGB<T>` and `RGBA<T>` there are a few common pixel formats defined as well:
 
-format  | bits                             | notes
---------+----------------------------------+------
-R3G3B2  | RRRGGGBB                         |
-ARGB2   | AARRGGBB                         |
-A1RGB5  | ARRRRRGGGGGBBBBB                 |
-R5G6B5  | RRRRRGGGGGGBBBBB                 |
-RGB8    | RRRRRRRRGGGGGGGGBBBBBBBB         | go-to 8-bit RGB access format (`RGB<u8>` defines the wrong mathematical operators)
-ARGB8   | AAAAAAAARRRRRRRRGGGGGGGGBBBBBBBB | go-to 8-bit RGBA access format (`RGBA<u8>` defines the wrong mathematical operators)
-A2RGB10 | AARRRRRRRRRRGGGGGGGGGGBBBBBBBBBB |
+format    | bits
+----------|-----
+R3G3B2    | RRRGGGBB
+ARGB2     | AARRGGBB
+ARGB4     | AAAARRRRGGGGBBBB
+A1RGB5    | ARRRRRGGGGGBBBBB
+R5G6B5    | RRRRRGGGGGGBBBBB
+RGB8      | RRRRRRRRGGGGGGGGBBBBBBBB
+ARGB8     | AAAAAAAARRRRRRRRGGGGGGGGBBBBBBBB
+A2RGB10   | AARRRRRRRRRRGGGGGGGGGGBBBBBBBBBB
+RGB<f32>  | 3 32-bit floats
+RGB<f64>  | 3 64-bit floats
+RGBA<f32> | 4 32-bit floats
+RGBA<f64> | 4 64-bit floats 
 
 All formats can be converted to/from `RGB<T>`, `RGBA<T>` and `u32` via the `From` trait. Use `RGB<T>` and `RGBA<T>` to do calculations, and the other formats for storage.
+
+`RGB8` and `RGBA8` allow direct access to the u8 red, green, blue and alpha components, much like `RGB<T>` and `RGBA<T>`.
 
 ### Image Formats
 
