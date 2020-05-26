@@ -3,7 +3,7 @@
 
 use crate::*;
 
-pub fn test(_src: &[u8]) -> Option<(u32,u32)> {
+pub fn test(_src: &[u8]) -> Option<usizexy> {
 	None
 }
 

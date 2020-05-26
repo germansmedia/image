@@ -451,20 +451,20 @@ fn clampf(v: f32,min: f32,max: f32) -> f32 {
     }
 }
 
-fn make_lf<T: Pixel + From<RGB8>>(l: f32,gamma: f32) -> T {
+fn make_lf<T: Pixel>(l: f32,gamma: f32) -> T {
     let ul = (clampf(l.powf(gamma),0.0,1.0) * 255.0) as u8;
-    return T::from(RGB8 { r: ul,g: ul,b: ul, });
+    return T::new_rgb(ul,ul,ul);
 }
 
-fn make_rgbaf<T: Pixel + From<ARGB8>>(r: f32,g: f32,b: f32,a: f32,gamma: f32) -> T {
+fn make_rgbaf<T: Pixel>(r: f32,g: f32,b: f32,a: f32,gamma: f32) -> T {
     let ur = (clampf(r.powf(gamma),0.0,1.0) * 255.0) as u8;
     let ug = (clampf(g.powf(gamma),0.0,1.0) * 255.0) as u8;
     let ub = (clampf(b.powf(gamma),0.0,1.0) * 255.0) as u8;
     let ua = (clampf(a.powf(gamma),0.0,1.0) * 255.0) as u8;
-    return T::from(ARGB8 { r: ur,g: ug,b: ub,a: ua, });
+    return T::new_rgba(ur,ug,ub,ua);
 }
 
-fn make_c<T: Pixel + From<ARGB8>>(c: u32,gamma: f32) -> T {
+fn make_c<T: Pixel>(c: u32,gamma: f32) -> T {
     let r = (((c >> 16) & 255) as f32) / 255.0;
     let g = (((c >> 8) & 255) as f32) / 255.0;
     let b = ((c & 255) as f32) / 255.0;
@@ -473,10 +473,10 @@ fn make_c<T: Pixel + From<ARGB8>>(c: u32,gamma: f32) -> T {
     let ug = (clampf(g.powf(gamma),0.0,1.0) * 255.0) as u8;
     let ub = (clampf(b.powf(gamma),0.0,1.0) * 255.0) as u8;
     let ua = (clampf(a.powf(gamma),0.0,1.0) * 255.0) as u8;
-    return T::from(ARGB8 { r: ur,g: ug,b: ub,a: ua, });
+    return T::new_rgba(ur,ug,ub,ua);
 }
 
-fn decode_pixels<T: Pixel + From<RGB8> + From<ARGB8>>(dst: &mut [T],src: &[u8],width: usize,height: usize,stride: usize,x0: usize,y0: usize,dx: usize,dy: usize,itype: u16,palette: &[u32; 256],gamma: f32) {
+fn decode_pixels<T: Pixel>(dst: &mut [T],src: &[u8],width: usize,height: usize,stride: usize,x0: usize,y0: usize,dx: usize,dy: usize,itype: u16,palette: &[u32; 256],gamma: f32) {
     let mut sp = 0;
     match itype {
         TYPE_L1 => {
@@ -691,7 +691,7 @@ fn from_be32(src: &[u8]) -> u32 {
     ((src[0] as u32) << 24) | ((src[1] as u32) << 16) | ((src[2] as u32) << 8) | (src[3] as u32)
 }
 
-pub fn test(src: &[u8]) -> Option<(usize,usize)> {
+pub fn test(src: &[u8]) -> Option<usizexy> {
     if (src[0] == 0x89) && (src[1] == 0x50) && (src[2] == 0x4E) && (src[3] == 0x47) && (src[4] == 0x0D) && (src[5] == 0x0A) && (src[6] == 0x1A) && (src[7] == 0x0A) {
         let mut sp: usize = 8;
         while sp < src.len() {
@@ -711,7 +711,7 @@ pub fn test(src: &[u8]) -> Option<(usize,usize)> {
                     (t == TYPE_C1) | (t == TYPE_C2) | (t == TYPE_C4) | (t == TYPE_C8) |
                     (t == TYPE_RGB8) | (t == TYPE_RGB16) |
                     (t == TYPE_RGBA8) | (t == TYPE_RGBA16) {
-                        return Some((width,height));
+                        return Some(usizexy { x: width,y: height, });
                 }
             }
             else if chunk_type == 0x49454E44 { // IEND
@@ -726,7 +726,7 @@ pub fn test(src: &[u8]) -> Option<(usize,usize)> {
     None
 }
 
-pub fn decode<T: Pixel + From<RGB8> + From<ARGB8>>(src: &[u8]) -> Result<Image<T>,String> {
+pub fn decode<T: Pixel>(src: &[u8]) -> Result<Image<T>,String> {
     if (src[0] != 0x89) ||
         (src[1] != 0x50) ||
         (src[2] != 0x4E) ||

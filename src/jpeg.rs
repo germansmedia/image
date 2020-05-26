@@ -774,7 +774,7 @@ fn draw_macroblock_rgb444<T: Pixel>(image: &mut Image<T>,x0: usize,y0: usize,wid
 	}
 }
 
-pub fn test(src: &[u8]) -> Option<(usize,usize)> {
+pub fn test(src: &[u8]) -> Option<usizexy> {
 	let mut sp = 0;
 	if from_be16(&src[sp..sp + 2]) != 0xFFD8 {
 		return None;
@@ -789,7 +789,7 @@ pub fn test(src: &[u8]) -> Option<(usize,usize)> {
 				let height = from_be16(&src[sp + 7..sp + 9]) as usize;
 				let components = src[sp + 9];
 				if (components == 1) || (components == 3) {  // does not support RGBA or CMYK JPEGs
-					return Some((width,height));
+					return Some(usizexy { x: width,y: height, });
 				}
 				return None;
 			},

@@ -408,7 +408,7 @@ fn decode_pixels<T: Pixel>(dst: &mut [T],src: &[u8],width: usize,height: usize,b
     }
 }
 
-pub fn test(src: &[u8]) -> Option<(usize,usize)> {
+pub fn test(src: &[u8]) -> Option<usizexy> {
     let tag = from_le16(&src[0..2]);
     if (tag == 0x4D42) ||   // BM (Windows BMP)
         (tag == 0x4142) ||  // BA (OS/2 bitmap)
@@ -458,7 +458,7 @@ pub fn test(src: &[u8]) -> Option<(usize,usize)> {
             if offset as usize + height * line > src.len() {
                 return None;
             }
-            return Some((width,height));
+            return Some(usizexy { x: width,y: height, });
         }
         else {
             let width = from_le32(&src[18..22]) as usize;
@@ -492,7 +492,7 @@ pub fn test(src: &[u8]) -> Option<(usize,usize)> {
             if (line != 0) && (offset as usize + height * line > src.len()) {
                 return None;
             }
-            return Some((width,height));
+            return Some(usizexy { x: width,y: height, });
         }
     }
     None
