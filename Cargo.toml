@@ -1,5 +1,5 @@
 [package]
-name = "image_formats"
+name = "imageformats"
 version = "0.1.0"
 authors = ["Desmond Germans <desmond@germansmedia.nl>"]
 edition = "2018"
@@ -8,17 +8,17 @@ edition = "2018"
 opt-level = 0
 debug = true
 lto = true
-codegen-units = 12
+codegen-units = 28
 
 [profile.release]
 opt-level = 2
 #debug = true
 debug = false
 lto = false
-codegen-units = 12
+codegen-units = 28
 
 [lib]
-name = "image_formats"
+name = "imageformats"
 crate-type = ["rlib"]
 
 [target.x86_64-unknown-linux-gnu.dependencies]
