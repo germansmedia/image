@@ -1,12 +1,8 @@
 # image
 
-MIT NIHS image manipulation and format implementations, version 0.1.0
+Image manipulation and format implementations, version 0.1.0
 
 Desmond Germans, 2019
-
-If you use this, mention my name somewhere, and also, do one good deed for your friends.
-
-*WARNING: NIHS stands for Not Invented Here Syndrome. If this bothers you, please use the official image format crates (there are a few, for instance `image-0.23.0`) and associated dependencies. If, however, that makes your compiling sessions slow and bloated, feel free to use `image` anyway.*
 
 ## Image Manipulation
 
