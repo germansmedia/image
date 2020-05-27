@@ -714,7 +714,7 @@ pub fn encode<T: Pixel>(image: &Image<T>) -> Result<Vec<u8>,String> where u32: F
     dst.push32(0);  // 118
     for y in 0..image.size.y {
         for x in 0..image.size.x {
-            dst.push32(u32::from(*image.pixel(usizexy { x: x,y: y, })));  // 122..
+            dst.push32(u32::from(*image.pixel(usizexy { x: x,y: image.size.y - y - 1, })));  // 122..
         }
     }
     Ok(dst)
