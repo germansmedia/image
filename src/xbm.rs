@@ -1,5 +1,6 @@
-// image
-// by Desmond Germans
+// (C) Copyright 2020, by Germans Media Technology & Services
+// Image
+// XBM Image Format
 
 use crate::*;
 

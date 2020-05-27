@@ -2,7 +2,8 @@
 
 Image manipulation and format implementations, version 0.1.0
 
-Desmond Germans, 2019
+by Desmond Germans, Ph.D
+Germans Media Technology & Services
 
 ## Image Manipulation
 

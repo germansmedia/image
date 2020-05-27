@@ -1,5 +1,6 @@
-// image_formats::pbm/pgm/ppm
-// by Desmond Germans, 2019
+// (C) Copyright 2020, by Germans Media Technology & Services
+// Image
+// PBM Image Format
 
 use crate::*;
 

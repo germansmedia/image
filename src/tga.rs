@@ -1,5 +1,6 @@
-// image_formats::tga
-// by Desmond Germans, 2019
+// (C) Copyright 2020, by Germans Media Technology & Services
+// Image
+// TGA Image Format
 
 use crate::*;
 

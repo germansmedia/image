@@ -1,5 +1,6 @@
-// image
-// by Desmond Germans
+// (C) Copyright 2020, by Germans Media Technology & Services
+// Image
+// PNG Image Format
 
 use math::*;
 use crate::*;

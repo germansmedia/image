@@ -1,5 +1,6 @@
-// image_formats::bmp
-// by Desmond Germans, 2019
+// (C) Copyright 2020, by Germans Media Technology & Services
+// Image
+// BMP Image Format
 
 use math::*;
 use crate::*;
