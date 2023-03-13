@@ -114,6 +114,9 @@ impl Table {
 }
 
 fn jpeg_get8(block: &[u8],rp: &mut usize) -> u8 {
+    if *rp >= block.len() {
+        return 0;
+    }
 	let mut b = block[*rp];
 	//println!("[{:02X}]",b);
 	*rp += 1;
@@ -126,6 +129,15 @@ fn jpeg_get8(block: &[u8],rp: &mut usize) -> u8 {
 		}
 	}
 	b
+}
+
+fn jpeg_unget8(block: &[u8], rp: &mut usize) {
+    *rp -= 1;
+    if block[*rp] == 0x00 {
+        if block[*rp - 1] == 0xFF {
+            *rp -= 1;
+        }
+    }
 }
 
 struct Reader<'a> {
@@ -153,13 +165,13 @@ impl<'a> Reader<'a> {
 		}
 	}
 
-	fn restock(&mut self) {
-		while self.bit <= 24 {
-			let b = if self.rp >= self.block.len() { 0 } else { jpeg_get8(self.block,&mut self.rp) };  // fill with 0 if at end of block
-			self.cache |= (b as u32) << (24 - self.bit);
-			self.bit += 8;
-		}
-	}
+    fn restock(&mut self) {
+        while self.bit <= 24 {
+            let b = jpeg_get8(self.block, &mut self.rp);
+            self.cache |= (b as u32) << (24 - self.bit);
+            self.bit += 8;
+        }
+    }
 
 	pub fn peek(&self,n: usize) -> u32 {
 		self.cache >> (32 - n)
@@ -202,38 +214,20 @@ impl<'a> Reader<'a> {
 		self.restock();
 	}
 
-	pub fn leave(&mut self) -> usize {
-		//println!("leave: bit = {}, rp = {}",self.bit,self.rp);
-		// superspecial case: no JPEG data read at all (only during initial programming)
-		if (self.bit == 32) && (self.rp == 4) {
-			return 0;
-		}
-		/*// first search FFD9 to elimiate stray FFs past end of buffer
-		if (self.block[self.rp - 5] == 0xFF) && (self.block[self.rp - 4] == 0xD9) {
-			return self.rp - 5;
-		}
-		if (self.block[self.rp - 4] == 0xFF) && (self.block[self.rp - 3] == 0xD9) {
-			return self.rp - 4;
-		}
-		if (self.block[self.rp - 3] == 0xFF) && (self.block[self.rp - 2] == 0xD9) {
-			return self.rp - 3;
-		}
-		if (self.block[self.rp - 2] == 0xFF) && (self.block[self.rp - 1] == 0xD9) {
-			return self.rp - 2;
-		}
-		if (self.block[self.rp - 1] == 0xFF) && (self.block[self.rp] == 0xD9) {
-			return self.rp - 1;
-		}*/
-		// anything else
-		for _i in 0..((self.bit + 7) / 8) - 2 {
-			if (self.block[self.rp - 1] == 0x00) && (self.block[self.rp - 2] == 0xFF) {
-				self.rp -= 1;
-			}
-			self.rp -= 1;
-		}
-		//println!("and leaving with rp = {} ({:02X} {:02X})",self.rp,self.block[self.rp],self.block[self.rp + 1]);
-		self.rp
-	}
+    pub fn leave(&mut self) -> usize {
+        //println!("leave: bit = {}, rp = {}, cache = {:08X}, byte-aligned cache = {:08X}",self.bit,self.rp,self.cache,self.cache >> (32 - self.bit));
+
+        // rewind the cache
+        let bytes = (self.bit >> 3) + 1;
+        //println!("rewinding {} bytes",bytes);
+        for _ in 0..bytes {
+            jpeg_unget8(self.block,&mut self.rp);
+        }
+
+        //println!("and leaving with rp = {} ({:02X} {:02X})",self.rp,self.block[self.rp],self.block[self.rp + 1]);
+
+        self.rp
+    }
 }
 
 fn unpack_sequential(reader: &mut Reader,coeffs: &mut [i32],dcht: &Table,acht: &Table,dc: &mut i32) {
